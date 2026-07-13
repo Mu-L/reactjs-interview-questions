@@ -374,6 +374,15 @@ Hide/Show table of contents
 | 317 | [How do you handle cleanup in useEffect?](#how-do-you-handle-cleanup-in-useeffect)                                                                                                                                               |
 | 318 | [What are the differences between useEffect and useEvent (experimental)?](#what-are-the-differences-between-useeffect-and-useevent-experimental)                                                                                 |
 | 319 | [What are the best practices for using React Hooks?](#what-are-the-best-practices-for-using-react-hooks)                                                                                                                         |
+|     | **Modern React Features (React 18/19)**                                                                                                                                                                                           |
+| 320 | [What are the key features introduced in React 18?](#what-are-the-key-features-introduced-in-react-18)                                                                                                                            |
+| 321 | [What are the key features introduced in React 19?](#what-are-the-key-features-introduced-in-react-19)                                                                                                                            |
+| 322 | [What is the use() hook in React 19?](#what-is-the-use-hook-in-react-19)                                                                                                                                                         |
+| 323 | [What are Server Actions in React 19?](#what-are-server-actions-in-react-19)                                                                                                                                                     |
+| 324 | [What are useFormState and useFormStatus hooks?](#what-are-useformstate-and-useformstatus-hooks)                                                                                                                                 |
+| 325 | [What is the useOptimistic hook?](#what-is-the-useoptimistic-hook)                                                                                                                                                               |
+| 326 | [What is the React Compiler (React Forget)?](#what-is-the-react-compiler-react-forget)                                                                                                                                           |
+| 327 | [What is Streaming SSR and how does React 18+ improve it?](#what-is-streaming-ssr-and-how-does-react-18-improve-it)                                                                                                              |
 
 </details>
 
@@ -8312,7 +8321,7 @@ Technically it is possible to write nested function components but it is not sug
 
 **[⬆ Back to Top](#table-of-contents)**
 
-318. ### What are the best practices for using React Hooks?
+319. ### What are the best practices for using React Hooks?
 
      Following best practices ensures your hooks are predictable, maintainable, and bug-free.
 
@@ -8390,6 +8399,770 @@ Technically it is possible to write nested function components but it is not sug
 
      #### 7. **Clean Up Side Effects**
      Always return a cleanup function when subscribing to events, timers, or external data sources.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+## Modern React Features (React 18/19)
+
+320. ### What are the key features introduced in React 18?
+
+     React 18, released in March 2022, introduced several groundbreaking features focused on performance and user experience:
+
+     #### 1. **Automatic Batching**
+     Batch multiple state updates together (even in async code) to reduce re-renders.
+     ```jsx
+     // Before React 18: Only batched in event handlers
+     // After React 18: Batched everywhere
+     setTimeout(() => {
+       setCount(c => c + 1);
+       setFlag(f => !f);
+       // Only 1 re-render in React 18!
+     }, 1000);
+     ```
+
+     #### 2. **Concurrent Features**
+     - **useTransition**: Mark updates as non-urgent
+     - **useDeferredValue**: Defer expensive re-renders
+     - **Suspense on Server**: SSR with Suspense support
+
+     #### 3. **New createRoot API**
+     ```jsx
+     // Old way (React 17)
+     ReactDOM.render(<App />, document.getElementById('root'));
+
+     // New way (React 18)
+     import { createRoot } from 'react-dom/client';
+     const root = createRoot(document.getElementById('root'));
+     root.render(<App />);
+     ```
+
+     #### 4. **Streaming SSR with Suspense**
+     Stream HTML from server and hydrate components as they arrive.
+
+     #### 5. **New Hooks**
+     - `useId`: Generate unique IDs for accessibility
+     - `useSyncExternalStore`: Subscribe to external stores
+     - `useInsertionEffect`: For CSS-in-JS libraries
+
+     #### 6. **Strict Mode Improvements**
+     Double-invokes effects in development to catch bugs.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+321. ### What are the key features introduced in React 19?
+
+     React 19 (released 2024) brings major improvements for full-stack React applications:
+
+     #### 1. **React Compiler (formerly React Forget)**
+     Automatic memoization - no more manual `useMemo`, `useCallback`, or `React.memo` needed!
+     ```jsx
+     // Before: Manual optimization
+     const memoizedValue = useMemo(() => expensiveCalc(a, b), [a, b]);
+     
+     // React 19: Compiler does it automatically
+     const value = expensiveCalc(a, b); // Automatically optimized!
+     ```
+
+     #### 2. **Server Actions**
+     Call server functions directly from components:
+     ```jsx
+     async function createPost(formData) {
+       'use server'
+       const post = await db.posts.create({
+         title: formData.get('title')
+       });
+       revalidatePath('/posts');
+       return post;
+     }
+
+     function NewPost() {
+       return (
+         <form action={createPost}>
+           <input name="title" />
+           <button type="submit">Create</button>
+         </form>
+       );
+     }
+     ```
+
+     #### 3. **Actions & Form Actions**
+     Automatic handling of pending states, errors, and optimistic updates:
+     ```jsx
+     function Form() {
+       const [state, formAction] = useFormState(serverAction, initialState);
+       const { pending } = useFormStatus();
+       
+       return (
+         <form action={formAction}>
+           <input disabled={pending} />
+           <button disabled={pending}>
+             {pending ? 'Submitting...' : 'Submit'}
+           </button>
+         </form>
+       );
+     }
+     ```
+
+     #### 4. **use() Hook**
+     Read resources (Promises, Context) inside render:
+     ```jsx
+     function User({ userPromise }) {
+       const user = use(userPromise); // Suspends until resolved
+       return <div>{user.name}</div>;
+     }
+     ```
+
+     #### 5. **useOptimistic Hook**
+     Implement optimistic UI updates:
+     ```jsx
+     function TodoList({ todos }) {
+       const [optimisticTodos, addOptimisticTodo] = useOptimistic(
+         todos,
+         (state, newTodo) => [...state, { ...newTodo, pending: true }]
+       );
+
+       async function createTodo(title) {
+         addOptimisticTodo({ id: Date.now(), title });
+         await saveTodo(title);
+       }
+
+       return optimisticTodos.map(todo => (
+         <Todo key={todo.id} {...todo} />
+       ));
+     }
+     ```
+
+     #### 6. **Document Metadata**
+     Built-in support for `<title>`, `<meta>`, etc.:
+     ```jsx
+     function BlogPost({ post }) {
+       return (
+         <>
+           <title>{post.title}</title>
+           <meta name="description" content={post.excerpt} />
+           <article>{post.content}</article>
+         </>
+       );
+     }
+     ```
+
+     #### 7. **Asset Loading APIs**
+     Preload resources for better performance:
+     ```jsx
+     import { preload, preinit } from 'react-dom';
+
+     preload('/font.woff2', { as: 'font' });
+     preinit('/script.js', { as: 'script' });
+     ```
+
+**[⬆ Back to Top](#table-of-contents)**
+
+322. ### What is the use() hook in React 19?
+
+     The `use()` hook allows you to read the value of a resource (Promise or Context) during render, with Suspense integration.
+
+     #### Reading Promises
+     ```jsx
+     import { use, Suspense } from 'react';
+
+     function UserProfile({ userPromise }) {
+       const user = use(userPromise); // Suspends until resolved
+       
+       return (
+         <div>
+           <h1>{user.name}</h1>
+           <p>{user.email}</p>
+         </div>
+       );
+     }
+
+     function App() {
+       const userPromise = fetchUser(123);
+       
+       return (
+         <Suspense fallback={<div>Loading...</div>}>
+           <UserProfile userPromise={userPromise} />
+         </Suspense>
+       );
+     }
+     ```
+
+     #### Reading Context
+     ```jsx
+     import { use } from 'react';
+     import { ThemeContext } from './context';
+
+     function Button() {
+       const theme = use(ThemeContext);
+       return <button className={theme}>Click me</button>;
+     }
+     ```
+
+     #### Key Differences from Other Hooks
+
+     | Feature | use() | useContext() | useState() |
+     |---------|-------|--------------|------------|
+     | Can be called conditionally | ✅ Yes | ❌ No | ❌ No |
+     | Can be called in loops | ✅ Yes | ❌ No | ❌ No |
+     | Suspends for Promises | ✅ Yes | ❌ N/A | ❌ N/A |
+     | Reads Context | ✅ Yes | ✅ Yes | ❌ N/A |
+
+     #### Conditional Usage (Unique!)
+     ```jsx
+     function Component({ showUser, userPromise }) {
+       // ✅ This is allowed with use()!
+       const user = showUser ? use(userPromise) : null;
+       
+       return user ? <div>{user.name}</div> : <div>No user</div>;
+     }
+     ```
+
+**[⬆ Back to Top](#table-of-contents)**
+
+323. ### What are Server Actions in React 19?
+
+     **Server Actions** allow you to call server-side functions directly from client components without writing API endpoints.
+
+     #### Basic Server Action
+     ```jsx
+     // app/actions.js
+     'use server'
+
+     export async function createPost(formData) {
+       const title = formData.get('title');
+       const content = formData.get('content');
+       
+       const post = await db.posts.create({
+         title,
+         content,
+         userId: await getCurrentUser()
+       });
+       
+       revalidatePath('/posts');
+       redirect(`/posts/${post.id}`);
+     }
+     ```
+
+     #### Using in Forms
+     ```jsx
+     // app/new-post.jsx
+     import { createPost } from './actions';
+
+     export default function NewPost() {
+       return (
+         <form action={createPost}>
+           <input name="title" required />
+           <textarea name="content" required />
+           <button type="submit">Create Post</button>
+         </form>
+       );
+     }
+     ```
+
+     #### With useFormState for Loading States
+     ```jsx
+     'use client'
+     import { useFormState } from 'react-dom';
+     import { createPost } from './actions';
+
+     export default function NewPost() {
+       const [state, formAction] = useFormState(createPost, { message: '' });
+       
+       return (
+         <form action={formAction}>
+           <input name="title" required />
+           <textarea name="content" required />
+           <button type="submit">Create Post</button>
+           {state.message && <p>{state.message}</p>}
+         </form>
+       );
+     }
+     ```
+
+     #### Progressive Enhancement
+     Server Actions work even if JavaScript is disabled!
+     ```jsx
+     // This form works without JavaScript
+     <form action={serverAction}>
+       <input name="email" type="email" />
+       <button>Subscribe</button>
+     </form>
+     ```
+
+     #### Security
+     - Automatically CSRF protected
+     - Always run on server (never exposed to client)
+     - Can use server-only packages safely
+
+**[⬆ Back to Top](#table-of-contents)**
+
+324. ### What are useFormState and useFormStatus hooks?
+
+     These hooks simplify form handling with Server Actions in React 19.
+
+     #### useFormState
+     Manages form state and handles server responses:
+     ```jsx
+     'use client'
+     import { useFormState } from 'react-dom';
+     import { loginAction } from './actions';
+
+     export default function LoginForm() {
+       const [state, formAction] = useFormState(loginAction, {
+         errors: {},
+         message: ''
+       });
+
+       return (
+         <form action={formAction}>
+           <input name="email" type="email" />
+           {state.errors.email && <p>{state.errors.email}</p>}
+           
+           <input name="password" type="password" />
+           {state.errors.password && <p>{state.errors.password}</p>}
+           
+           <button type="submit">Login</button>
+           {state.message && <p>{state.message}</p>}
+         </form>
+       );
+     }
+     ```
+
+     #### useFormStatus
+     Get the pending state of parent form:
+     ```jsx
+     'use client'
+     import { useFormStatus } from 'react-dom';
+
+     function SubmitButton() {
+       const { pending, data, method, action } = useFormStatus();
+       
+       return (
+         <button type="submit" disabled={pending}>
+           {pending ? 'Submitting...' : 'Submit'}
+         </button>
+       );
+     }
+
+     // Must be used in a child component of <form>
+     export default function MyForm() {
+       return (
+         <form action={serverAction}>
+           <input name="email" />
+           <SubmitButton />
+         </form>
+       );
+     }
+     ```
+
+     #### Combining Both
+     ```jsx
+     'use client'
+     import { useFormState, useFormStatus } from 'react-dom';
+
+     function SubmitButton() {
+       const { pending } = useFormStatus();
+       return (
+         <button disabled={pending}>
+           {pending ? '⏳ Saving...' : '💾 Save'}
+         </button>
+       );
+     }
+
+     export default function EditProfile() {
+       const [state, formAction] = useFormState(updateProfile, null);
+
+       return (
+         <form action={formAction}>
+           <input name="name" defaultValue={user.name} />
+           <input name="bio" defaultValue={user.bio} />
+           <SubmitButton />
+           {state?.success && <p>✅ Profile updated!</p>}
+           {state?.error && <p>❌ {state.error}</p>}
+         </form>
+       );
+     }
+     ```
+
+     #### Key Points
+     - `useFormState`: For managing server responses and errors
+     - `useFormStatus`: For UI feedback during submission
+     - `useFormStatus` must be used in a child component of the form
+     - Works seamlessly with Server Actions
+
+**[⬆ Back to Top](#table-of-contents)**
+
+325. ### What is the useOptimistic hook?
+
+     `useOptimistic` enables optimistic UI updates - showing changes immediately before server confirmation.
+
+     #### Basic Usage
+     ```jsx
+     import { useOptimistic } from 'react';
+
+     function TodoList({ todos, addTodo }) {
+       const [optimisticTodos, addOptimisticTodo] = useOptimistic(
+         todos,
+         (currentTodos, newTodo) => [...currentTodos, { ...newTodo, pending: true }]
+       );
+
+       async function handleSubmit(formData) {
+         const title = formData.get('title');
+         
+         // Immediately show optimistic update
+         addOptimisticTodo({ id: Date.now(), title });
+         
+         // Send to server
+         await addTodo(title);
+         // Component re-renders with real data when complete
+       }
+
+       return (
+         <>
+           <form action={handleSubmit}>
+             <input name="title" />
+             <button>Add</button>
+           </form>
+           
+           <ul>
+             {optimisticTodos.map(todo => (
+               <li key={todo.id} style={{ opacity: todo.pending ? 0.5 : 1 }}>
+                 {todo.title}
+                 {todo.pending && ' ⏳'}
+               </li>
+             ))}
+           </ul>
+         </>
+       );
+     }
+     ```
+
+     #### With Server Actions
+     ```jsx
+     'use client'
+     import { useOptimistic } from 'react';
+     import { likePost } from './actions';
+
+     export default function Post({ post, likes }) {
+       const [optimisticLikes, addOptimisticLike] = useOptimistic(
+         likes,
+         (currentLikes, amount) => currentLikes + amount
+       );
+
+       async function handleLike() {
+         addOptimisticLike(1); // Immediate UI update
+         await likePost(post.id); // Server update
+       }
+
+       return (
+         <div>
+           <h2>{post.title}</h2>
+           <button onClick={handleLike}>
+             ❤️ {optimisticLikes} Likes
+           </button>
+         </div>
+       );
+     }
+     ```
+
+     #### Complex Example with Error Handling
+     ```jsx
+     function ShoppingCart({ items, removeItem }) {
+       const [optimisticItems, removeOptimistic] = useOptimistic(
+         items,
+         (current, removedId) => current.filter(item => item.id !== removedId)
+       );
+
+       async function handleRemove(itemId) {
+         removeOptimistic(itemId); // Immediate removal from UI
+         
+         try {
+           await removeItem(itemId);
+         } catch (error) {
+           // Automatic rollback on error!
+           toast.error('Failed to remove item');
+         }
+       }
+
+       return (
+         <ul>
+           {optimisticItems.map(item => (
+             <li key={item.id}>
+               {item.name}
+               <button onClick={() => handleRemove(item.id)}>Remove</button>
+             </li>
+           ))}
+         </ul>
+       );
+     }
+     ```
+
+     #### When to Use
+     - ✅ Toggling likes/favorites
+     - ✅ Adding/removing items from lists
+     - ✅ Sending messages in chat
+     - ✅ Any action where immediate feedback improves UX
+     - ❌ Financial transactions (wait for confirmation)
+     - ❌ Critical operations requiring server validation
+
+**[⬆ Back to Top](#table-of-contents)**
+
+326. ### What is the React Compiler (React Forget)?
+
+     The **React Compiler** (formerly known as React Forget) automatically optimizes your components by adding memoization where needed - eliminating the need for manual `useMemo`, `useCallback`, and `React.memo`.
+
+     #### Before React Compiler
+     ```jsx
+     function TodoList({ todos, filter }) {
+       // Manual optimization needed
+       const filteredTodos = useMemo(() => {
+         return todos.filter(todo => todo.status === filter);
+       }, [todos, filter]);
+
+       const handleToggle = useCallback((id) => {
+         toggleTodo(id);
+       }, [toggleTodo]);
+
+       return (
+         <div>
+           {filteredTodos.map(todo => (
+             <TodoItem 
+               key={todo.id} 
+               todo={todo} 
+               onToggle={handleToggle} 
+             />
+           ))}
+         </div>
+       );
+     }
+
+     // Need to wrap in React.memo
+     export default React.memo(TodoList);
+     ```
+
+     #### With React Compiler
+     ```jsx
+     function TodoList({ todos, filter }) {
+       // Compiler automatically optimizes this!
+       const filteredTodos = todos.filter(todo => todo.status === filter);
+
+       const handleToggle = (id) => {
+         toggleTodo(id);
+       };
+
+       return (
+         <div>
+           {filteredTodos.map(todo => (
+             <TodoItem 
+               key={todo.id} 
+               todo={todo} 
+               onToggle={handleToggle} 
+             />
+           ))}
+         </div>
+       );
+     }
+
+     // No React.memo needed!
+     export default TodoList;
+     ```
+
+     #### How It Works
+     1. **Analyzes code** during build time
+     2. **Identifies expensive calculations** and renders
+     3. **Automatically inserts memoization** where beneficial
+     4. **Preserves React semantics** - your code still behaves correctly
+
+     #### Benefits
+     - ✅ Simpler code - no manual optimization
+     - ✅ Better performance by default
+     - ✅ Fewer bugs from incorrect dependencies
+     - ✅ Easier to maintain and read
+     - ✅ Works with existing code
+
+     #### Enabling React Compiler
+     ```jsx
+     // next.config.js (Next.js)
+     module.exports = {
+       experimental: {
+         reactCompiler: true
+       }
+     }
+
+     // vite.config.js (Vite)
+     import { defineConfig } from 'vite'
+     import react from '@vitejs/plugin-react'
+
+     export default defineConfig({
+       plugins: [
+         react({
+           babel: {
+             plugins: [['babel-plugin-react-compiler']]
+           }
+         })
+       ]
+     })
+     ```
+
+     #### When to Still Use Manual Optimization
+     ```jsx
+     // For external libraries without Compiler support
+     import { expensiveLibFunction } from 'old-library';
+
+     function MyComponent() {
+       // May still need manual memoization here
+       const result = useMemo(() => expensiveLibFunction(), []);
+       return <div>{result}</div>;
+     }
+     ```
+
+     #### Compatibility
+     - Works with React 18.3+ and React 19
+     - Compatible with TypeScript
+     - Works with all React hooks
+     - Supports Server Components and Client Components
+
+**[⬆ Back to Top](#table-of-contents)**
+
+327. ### What is Streaming SSR and how does React 18+ improve it?
+
+     **Streaming SSR** sends HTML to the browser in chunks as it's generated, rather than waiting for the entire page. React 18+ dramatically improves this with Suspense integration.
+
+     #### Traditional SSR (Pre-React 18)
+     ```
+     Server: Wait for ALL data → Generate ALL HTML → Send to client
+     Client: Receive HTML → Download ALL JS → Hydrate ALL components
+     Problem: Slow components block entire page!
+     ```
+
+     #### Streaming SSR (React 18+)
+     ```
+     Server: Send HTML as it's ready, wrap slow parts in <Suspense>
+     Client: Render immediately, hydrate progressively
+     Benefit: User sees content faster!
+     ```
+
+     #### Basic Example
+     ```jsx
+     import { Suspense } from 'react';
+
+     export default function Page() {
+       return (
+         <html>
+           <body>
+             {/* Sent immediately */}
+             <header>
+               <h1>My App</h1>
+             </header>
+
+             {/* Sent immediately with fallback */}
+             <Suspense fallback={<div>Loading comments...</div>}>
+               <Comments /> {/* Streamed when ready */}
+             </Suspense>
+
+             {/* Also streamed separately */}
+             <Suspense fallback={<div>Loading recommendations...</div>}>
+               <Recommendations /> {/* Streamed when ready */}
+             </Suspense>
+
+             <footer>© 2026</footer>
+           </body>
+         </html>
+       );
+     }
+     ```
+
+     #### Server Component with Data Fetching
+     ```jsx
+     // This is a Server Component (async!)
+     async function Comments() {
+       const comments = await db.comments.findMany();
+       
+       return (
+         <ul>
+           {comments.map(comment => (
+             <li key={comment.id}>{comment.text}</li>
+           ))}
+         </ul>
+       );
+     }
+     ```
+
+     #### How It Works
+     1. Server starts sending HTML immediately
+     2. When it hits `<Suspense>`, it sends the fallback
+     3. Continues streaming rest of the page
+     4. When data is ready, sends the actual component
+     5. Client replaces fallback with real content
+     6. Hydration happens independently per component
+
+     #### Selective Hydration
+     ```jsx
+     function App() {
+       return (
+         <div>
+           <header>Header</header> {/* Hydrates first */}
+           
+           <Suspense fallback={<Spinner />}>
+             <HeavyComponent /> {/* Hydrates when user interacts */}
+           </Suspense>
+           
+           <Suspense fallback={<Spinner />}>
+             <Comments /> {/* Hydrates independently */}
+           </Suspense>
+         </div>
+       );
+     }
+     ```
+
+     #### Benefits
+     - **Faster TTFB** (Time to First Byte): User sees content sooner
+     - **Better UX**: Progressive loading instead of blank screen
+     - **Prioritized hydration**: Interactive elements hydrate first
+     - **Resilient**: Slow components don't block fast ones
+
+     #### Next.js App Router Example
+     ```jsx
+     // app/page.tsx
+     import { Suspense } from 'react';
+     import ProductList from './ProductList';
+     import Reviews from './Reviews';
+
+     export default function ProductPage() {
+       return (
+         <div>
+           <h1>Product Page</h1>
+           
+           {/* Streams product list first */}
+           <Suspense fallback={<ProductSkeleton />}>
+             <ProductList />
+           </Suspense>
+
+           {/* Reviews stream separately */}
+           <Suspense fallback={<ReviewSkeleton />}>
+             <Reviews />
+           </Suspense>
+         </div>
+       );
+     }
+
+     // These are async Server Components
+     async function ProductList() {
+       const products = await fetchProducts(); // Doesn't block Reviews
+       return <div>{/* render products */}</div>;
+     }
+
+     async function Reviews() {
+       const reviews = await fetchReviews(); // Doesn't block ProductList
+       return <div>{/* render reviews */}</div>;
+     }
+     ```
+
+     #### Key Requirements
+     - Use React 18+ with `createRoot` and `hydrateRoot`
+     - Wrap slow components in `<Suspense>`
+     - Use frameworks supporting streaming (Next.js, Remix, etc.)
+     - Server must support streaming responses
 
 **[⬆ Back to Top](#table-of-contents)**
 
